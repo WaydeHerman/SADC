@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+    <style type="text/css">
+        /* legend */
+        .legend {
+        font-size: 14px;
+        }
+        rect {
+        cursor: pointer; 
+        stroke-width: 2;
+        }
+        image.disabled {
+        opacity: 0.2 !important;
+        }
+    </style>       
+<body>
+
+<!-- Create a div where the graph will take place -->
+<div id="Visualisation"></div>
+
+<div class="slidecontainer">
+    <input type="range" name="mySlider" id=mySlider min="2009" max="2024" value="2009", step="1">
+</div>
+
+<script src="/d3/d3.js"></script>
+<script>
+    // define data
+
+
+        
+    
+    d3.csv("trial_data_all_countries.csv").then(function(data) {
+
+    
+
+    var filePath = '/Flags/'
+
+    data.forEach(function(d) {
+        d.enabled = true
+        d.flagPath = filePath + d.country + '.png'
+        if (d.country == 'Angola') {
+            d.color = "#007536"
+        }
+        if (d.country == 'Botswana') {
+            d.color = "#81AF69"
+        }
+        if (d.country == 'DRC') {
+            d.color = "#005E2F"
+        }
+        if (d.country == 'Eswatini') {
+            d.color = "#A0C519"
+        }
+        if (d.country == 'Lesotho') {
+            d.color = "#89BB24"
+        }
+        if (d.country == 'Malawi') {
+            d.color = "#00A970"
+        }
+        if (d.country == 'Mauritius') {
+            d.color = "#485B23"
+        }
+        if (d.country == 'Mozambique') {
+            d.color = "#5D7C2B"
+        }
+        if (d.country == 'Namibia') {
+            d.color = "#009C8B"
+        }
+        if (d.country == 'Seychelles') {
+            d.color = "#009D75"
+        }
+        if (d.country == 'South Africa') {
+            d.color = "#00A6E6"
+        }
+        if (d.country == 'Tanzania') {
+            d.color = "#008E3E"
+        }
+        if (d.country == 'Zambia') {
+            d.color = "#A7C714"
+        }
+        if (d.country == 'Zimbabwe') {
+            d.color = "#009640"
+        }
+
+    })
+
+    console.log(data)
+
+    // TO DO LIST:
+        // put in real data
+        // Host Site
+        // Issue with animations cancelling each other out.
+
+    var width = 960,
+        height = 400,
+        barHeight = height / 2 - 40;
+        barMin = 50;
+        inner_radius = 50;
+        arc_label_spacing = 0.1;
+        fontSize = "8px";
+        lineWidth = 1
+
+    // legend dimensions
+    var legendRectSize = 25,
+        legendSpacing = 1;
+
+    // NEED TO CHANGE THIS WITH CHANGE OF DATE:
+    var currentYear = 2009
+
+    var formatNumber = d3.format("s");
+
+    var svg = d3.select('#Visualisation').append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .append("g")
+        .attr("transform", "translate(" + width/2 + "," + height/2 + ")");
+
+    var barScale = d3.scaleLinear()
+        .domain([0,1])
+        .range([barMin, barHeight]);
+
+    var x = d3.scaleLinear()
+        .domain([0,1])
+        .range([barMin, -barHeight]);
+
+    var keys = data.map(function(d) { return d.label; });
+
+    var numBars = keys.length;
+
+    // this is the light green circle.
+    svg.append("circle")
+        .attr("r", barHeight)
+        .classed("outer", true)
+        .style("fill", "#B3D27C")
+        .style("stroke", "black")
+        .style("stroke-width","1.5px");
+
+    var circles = svg.selectAll("circle")
+            .data(x.ticks(4))
+            .enter().append("circle")
+            .attr("r", function(d) {return barScale(d);})
+            .style("fill", "none")
+            .style("stroke", "#FFEE00")
+            .style("stroke-dasharray", "2,2")
+            .style("stroke-width",".5px");
+
+    // label arc:
+    var arc_label = d3.arc()
+        .innerRadius(barHeight)
+        .outerRadius(barHeight*1.05)
+        .startAngle(function(d) {
+            return d.startAngleLabel;
+        })
+        .endAngle(function(d) {
+            return d.endAngleLabel;
+        })
+
+    var segments_label = svg.selectAll("arc_label")
+            .data(data)
+            .enter().append("path")
+            .each(function(d, i) { d.startAngleLabel = (i * 2 * Math.PI + arc_label_spacing+0.5) / numBars ; })
+            .each(function(d, i) { d.endAngleLabel = ((i + 1) * 2 * Math.PI - arc_label_spacing-0.5) / numBars ; })
+            .style("fill", function (d) { return (d.color); })
+            .style("fill-opacity", 1)
+            .attr("id", "arc_label")
+            .attr("d", arc_label);
+
+    svg.append("circle")
+        .attr("r", barHeight)
+        .classed("outer", true)
+        .style("fill", "none")
+        .style("stroke", "black")
+        .style("stroke-width","1.5px");
+
+    // Labels
+    var labelRadius = barHeight * 1.075;
+
+    var labels = svg.append("g")
+        .classed("labels", true);
+
+    labels.append("def")
+            .append("path")
+            .attr("id", "label-path")
+            .attr("d", "m0 " + -labelRadius + " a" + labelRadius + " " + labelRadius + " 0 1,1 -0.01 0");
+
+    labels.selectAll("text")
+            .data(data)
+            .enter().append("text")
+            .style("text-anchor", "middle")
+            .style("font-weight","bold")
+            .style("font-size", fontSize)
+            .attr("font-family", "Open Sans")
+            .style("fill", "#3e3e3e")
+            .append("textPath")
+            .attr("xlink:href", "#label-path")
+            .attr("startOffset", function(d, i) {return i * 100 / numBars + 50 / numBars + '%';})
+            .text(function(d) {return (d.country).toUpperCase(); });
+
+    var arc = d3.arc()
+        .innerRadius(inner_radius);
+
+    var segments = svg.selectAll("arc")
+            .data(data)
+            .enter().append("path")
+            .each(function(d) { d.outerRadius = inner_radius; })
+            .each(function(d, i) { d.startAngle = (i * 2 * Math.PI) / numBars; })
+            .each(function(d, i) { d.endAngle = ((i + 1) * 2 * Math.PI) / numBars; })
+            .style("fill", function (d) { return (d.color); })
+            .attr("id", "arc")
+            .attr("d", arc);
+
+    var lines = svg.selectAll("line")
+        .data(data)
+        .enter().append("line")
+        .attr("y2", -barHeight - 0)
+        .style("stroke", "#FFEE00")
+        .style("stroke-width",lineWidth)
+        .attr("transform", function(d, i) { return "rotate(" + (i * 360 / numBars) + ")"; });
+
+    svg.append("circle")
+        .attr("r", 50)
+        .classed("outer", true)
+        .style("fill", "white")
+        .style("stroke", "black")
+        .style("stroke-width","1.5px");
+
+    // define legend
+    var legend = svg.selectAll('.legend') // selecting elements with class 'legend'
+        .data(data) // refers to an array of labels from our dataset
+        .enter() // creates placeholder
+        .append('g') // replace placeholders with g elements
+        .attr('class', 'legend') // each g is given a legend class
+        .attr('transform', function(d, i) {                   
+            var height = legendRectSize + legendSpacing; // height of element is the height of the colored square plus the spacing      
+            var offset =  height * data.length / 2; // vertical offset of the entire legend = height of a single element & half the total number of elements  
+            var horz = 18 * legendRectSize; // the legend is shifted to the left to make room for the text
+            var vert = i * height - offset; // the top of the element is hifted up or down from the center using the offset defiend earlier and the index of the current element 'i'               
+            return 'translate(' + horz + ',' + vert + ')'; //return translation       
+        });
+
+    // adding colored squares to legend
+    legend.append('image') // append rectangle squares to legend  
+        .attr('xlink:href', function (d) { return d.flagPath})                                      
+        .attr('width', legendRectSize) // width of rect size is defined above                        
+        .attr('height', legendRectSize-7) // height of rect size is defined above                      
+        .attr("id", function (d) { 
+            return ("label " + d.label); }) // each stroke is passed a color
+        .on('click', function(d) {
+            var rect = d3.select(this); // this refers to the colored squared just clicked
+            var enabled = true; // set enabled true to default
+            var totalEnabled = d3.sum(data.map(function(d) { // can't disable all options
+                return (d.enabled) ? 1 : 0; // return 1 for each enabled entry. and summing it up
+            }));
+
+            if (rect.attr('class') === 'disabled') { // if class is disabled
+                rect.attr('class', ''); // remove class disabled
+            } else { // else
+            if (totalEnabled < 2) return; // if less than two labels are flagged, exit
+                rect.attr('class', 'disabled'); // otherwise flag the square disabled
+                enabled = false; // set enabled to false
+            };
+            
+            if ("label " + d.label === rect.attr('id') )  {
+                d.enabled = enabled; // if entry label matches legend label
+            };
+            update_country()
+
+            });
+
+    function update_country() {
+
+        function isEnabled(d) {
+            return d.enabled == true;
+        }
+        dataEnabled = data.filter(isEnabled)
+        var keysEnabled = dataEnabled.map(function(d) { return d.label; });
+        var numBarsEnabled = keysEnabled.length;
+
+        var labels_update = svg.selectAll("text")
+            .data(data);
+
+        var index_Line = 0
+        lines.transition()
+            .delay(250)
+            .duration(750)
+            .attr("transform", function(d) {
+                if (d.enabled == true) {
+                    index_Line += 1
+                    return "rotate(" + ((index_Line -1 ) * 360 / numBarsEnabled) + ")"
+                } else {
+                    return "rotate(" + (index_Line * 360 / numBarsEnabled) + ")"
+                }
+            })
+            
+        var index_Segment = 0
+        segments.enter()
+                    .append('path')
+                    .merge(segments)
+                    .transition()
+                    .delay(250)
+                    .duration(750)
+                    .attrTween("d", function(d, index) {
+                        if (d.enabled == true) {
+                            index_Segment += 1
+                            var o = d3.interpolate(d.startAngle, ((index_Segment - 1) * 2 * Math.PI) / numBarsEnabled)
+                            var a = d3.interpolate(d.endAngle, ((index_Segment) * 2 * Math.PI) / numBarsEnabled)
+                            return function(t) { 
+                                d.startAngle = o(t);
+                                d.endAngle = a(t)         
+                                return arc(d,index);
+                                }
+                        } else {
+                            var disabledStart = (index_Segment) * 2 * Math.PI / numBarsEnabled
+                            var disabledEnd = disabledStart
+                            var o = d3.interpolate(d.startAngle, disabledStart)
+                            var a = d3.interpolate(d.endAngle, disabledEnd)
+                            return function(t) { 
+                                d.startAngle = o(t);
+                                d.endAngle = a(t)            
+                                return arc(d,index);
+                                }
+                    }})
+
+        var index_SegmentsLabel = 0
+        segments_label.enter()
+                    .append('path')
+                    .merge(segments_label)
+                    .transition()
+                    .delay(250)
+                    .duration(750)
+                    .attrTween("d", function(d, index) {
+                        if (d.enabled == true) {
+                            index_SegmentsLabel += 1
+                            var o = d3.interpolate(d.startAngleLabel, ((index_SegmentsLabel - 1) * 2 * Math.PI + arc_label_spacing+0.5) / (numBarsEnabled));
+                            var a = d3.interpolate(d.endAngleLabel, (((index_SegmentsLabel - 1) + 1) * 2 * Math.PI - arc_label_spacing-0.5) / (numBarsEnabled));
+                            return function(t) { 
+                                d.startAngleLabel = o(t);
+                                d.endAngleLabel = a(t)         
+                                return arc_label(d,index);
+                                }
+                        } else {
+                            var disabledStart = (index_SegmentsLabel) * 2 * Math.PI / numBarsEnabled
+                            var disabledEnd = disabledStart
+                            var o = d3.interpolate(d.startAngleLabel, disabledStart)
+                            var a = d3.interpolate(d.endAngleLabel, disabledEnd)
+                            return function(t) { 
+                                d.startAngleLabel = o(t);
+                                d.endAngleLabel = a(t)            
+                                return arc_label(d,index);
+                                }
+                    }})
+
+        labels_update.transition()
+                .delay(250)
+                .duration(750)
+                .style("fill-opacity", function(d, i) {
+                    if (d.enabled == true) {
+                        return 1
+                    } else {
+                        return 0
+                    }})
+
+        var index_LabelPaths = 0
+        var labelPaths = svg.selectAll("textPath")
+                        .data(data)
+                        .transition()
+                        .delay(250)
+                        .duration(1000)
+                        .attr("startOffset", function(d, i) {
+                            if (d.enabled == true) {
+                                index_LabelPaths += 1
+                                return (index_LabelPaths - 1) * 100 / numBarsEnabled + 50 / numBarsEnabled + '%';
+                        } else {
+                            return (index_LabelPaths - 1) * 100 / numBarsEnabled + 50 / numBarsEnabled + '%';
+                        }});
+        
+    }
+
+    // Create a function that takes a dataset as input and update the plot:
+    function update_year(selectedYear) {
+
+        segments.transition()
+            .ease(d3.easeLinear)
+            .duration(500)
+            .delay(function(d,i) {return (25-i)*100;})
+            .attrTween("d", function(d,index) {
+                var i = d3.interpolate(d.outerRadius, barScale(eval("+d.count_" + selectedYear)));
+                return function(t) { 
+                    d.outerRadius = i(t);
+                    //console.log(d, index)
+                    return arc(d,index);           
+                };
+            
+            });
+        
+    }
+
+    update_year(2009)
+    
+    // Listen to the slider?
+    d3.select("#mySlider").on("change", function(d){
+        selectedValue = this.value 
+        update_year(selectedValue)
+    })
+    });
+
+
+
+
+
+
+</script>
